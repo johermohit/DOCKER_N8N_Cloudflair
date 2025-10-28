@@ -76,16 +76,6 @@ If the methods above fail, you can temporarily bypass the policy for your curren
      .\setup.ps1
      ```
      (Note: Use `.\` not `./` for Windows PowerShell)
-## if running into issue of permission errer 
-
-  - **Windows:**
-     ```powershell
-      Set-ExecutionPolicy -Scope Process
-     ```
-   - **Linux/macOS:**
-     ```bash
-     ./setup.sh
-     ```
     
 2. Access n8n:
    - Local: [http://localhost:5678](http://localhost:5678)
