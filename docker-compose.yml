@@ -26,6 +26,8 @@ services:
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=securepassword
       - N8N_RUNNERS_ENABLED=true
+      #  **THIS IS THE CRITICAL ADDITION** 
+      - WEBHOOK_URL=${N8N_PUBLIC_URL:-http://localhost:5678}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -36,8 +38,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     command: tunnel --no-autoupdate --url http://n8n:5678
-    depends_on:
-      - n8n
+    #  **"depends_on: - n8n" HAS BEEN REMOVED** 
     restart: unless-stopped
 volumes:
   postgres_data:

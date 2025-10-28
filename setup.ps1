@@ -39,20 +39,56 @@ try {
     exit 1
 }
 
-# 3) Start the Docker Compose stack
-Write-Host "Starting services..." -ForegroundColor Green
+# 3) Start services in order (NEW LOGIC)
+$ComposeCmd = "docker-compose"
+if (Has-Cmd "docker compose") { $ComposeCmd = "docker compose" }
+
+# Start cloudflared first to get the URL
+Write-Host "Starting Cloudflare tunnel..." -ForegroundColor Green
 try {
-    docker-compose -f "$ComposeFile" up -d
+    & $ComposeCmd -f "$ComposeFile" up -d cloudflared
 } catch {
-    try {
-        docker compose -f "$ComposeFile" up -d
-    } catch {
-        Write-Host "Failed to start Docker Compose stack. Make sure Docker Compose is installed." -ForegroundColor Red
-        exit 1
-    }
+    Write-Host "Failed to start cloudflared service." -ForegroundColor Red
+    exit 1
 }
 
-# 4) Wait for the service to be ready
+# Wait and get the tunnel URL
+Write-Host "Waiting for tunnel URL..." -ForegroundColor Cyan
+$tunnelUrl = $null
+for ($i = 1; $i -le 10; $i++) { # Try for 20s
+    $tunnelLogs = & $ComposeCmd -f "$ComposeFile" logs cloudflared 2>$null
+    if ($tunnelLogs) {
+        $tunnelUrl = $tunnelLogs | Select-String -Pattern "https://.*\.trycloudflare\.com" | 
+                     ForEach-Object { $_.Matches.Value } | Select-Object -Last 1
+        if ($tunnelUrl) {
+            Write-Host "Got public URL: $tunnelUrl" -ForegroundColor Green
+            break
+        }
+    }
+    Write-Host "Attempt $i/10 - Waiting for tunnel URL..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+}
+
+if (-not $tunnelUrl) {
+    Write-Host "Could not determine Cloudflare Tunnel URL. Check 'docker compose logs cloudflared'." -ForegroundColor Red
+    exit 1
+}
+
+# Set the URL as an environment variable for this session
+# This variable will be passed into docker-compose
+$env:N8N_PUBLIC_URL = $tunnelUrl
+
+# Now, start n8n and postgres. 
+# n8n will start postgres because of "depends_on"
+Write-Host "Starting n8n and postgres services..." -ForegroundColor Green
+try {
+    & $ComposeCmd -f "$ComposeFile" up -d n8n
+} catch {
+    Write-Host "Failed to start n8n service." -ForegroundColor Red
+    exit 1
+}
+
+# 4) Wait for the service to be ready (MODIFIED)
 Write-Host "Waiting for service at $AppUrl..." -ForegroundColor Cyan
 for ($i = 1; $i -le $Attempts; $i++) {
     try {
@@ -60,30 +96,19 @@ for ($i = 1; $i -le $Attempts; $i++) {
         if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500) {
             Write-Host "Ready: $AppUrl (HTTP $($resp.StatusCode))" -ForegroundColor Green
             
-            # Check for Cloudflare Tunnel URL
-            try {
-                $tunnelLogs = docker compose -f "$ComposeFile" logs cloudflared 2>$null
-                if (-not $tunnelLogs) {
-                    $tunnelLogs = docker-compose -f "$ComposeFile" logs cloudflared 2>$null
-                }
-                
-                if ($tunnelLogs) {
-                    $tunnelUrl = $tunnelLogs | Select-String -Pattern "https://.*\.trycloudflare\.com" | 
-                                ForEach-Object { $_.Matches.Value } | Select-Object -Last 1
-                                
-                    if ($tunnelUrl) {
-                        Write-Host "Public URL (Cloudflare Tunnel): $tunnelUrl" -ForegroundColor Green
-                    }
-                }
-            } catch {
-                # Cloudflared might not be running, which is OK
-            }
+            # Print the public URL we found earlier
+            Write-Host "Public URL (Cloudflare Tunnel): $env:N8N_PUBLIC_URL" -ForegroundColor Green
             
             exit 0
         }
     } catch {
+        # This handles cases where n8n returns a 401 (Unauthorized) which is a "ready" state
         if ($_.Exception.Response -and $_.Exception.Response.StatusCode.value__ -ge 400 -and $_.Exception.Response.StatusCode.value__ -lt 500) {
             Write-Host "Ready: $AppUrl (HTTP $($_.Exception.Response.StatusCode.value__))" -ForegroundColor Green
+            
+            # Print the public URL we found earlier
+            Write-Host "Public URL (Cloudflare Tunnel): $env:N8N_PUBLIC_URL" -ForegroundColor Green
+
             exit 0
         }
         Write-Host "Attempt $i/$Attempts - Waiting for service to be ready..." -ForegroundColor Yellow
