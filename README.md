@@ -11,12 +11,7 @@ This repository provides a simple way to run n8n with Postgres using Docker Comp
   - *The setup script will offer to install Docker Desktop if it's not detected*
 
 ### Setup:
-0. Here is a copy-pasteable section for your `README.md` file that explains the one-time file permission fix for both platforms.
-
------
-
-````markdown
-## Making the Script Executable (One-Time Setup)
+0. ## Making the Script Executable (One-Time Setup)
 
 Before you can run the setup script for the first time, you may need to tell your operating system that you trust it.
 
