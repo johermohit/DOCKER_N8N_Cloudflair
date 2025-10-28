@@ -11,6 +11,61 @@ This repository provides a simple way to run n8n with Postgres using Docker Comp
   - *The setup script will offer to install Docker Desktop if it's not detected*
 
 ### Setup:
+0. Here is a copy-pasteable section for your `README.md` file that explains the one-time file permission fix for both platforms.
+
+-----
+
+````markdown
+## Making the Script Executable (One-Time Setup)
+
+Before you can run the setup script for the first time, you may need to tell your operating system that you trust it.
+
+### On macOS / Linux
+
+You must give the script "execute" permissions.
+
+1.  Open your terminal.
+2.  Navigate to the project directory.
+3.  Run the following command one time:
+
+```bash
+chmod +x setup.sh
+````
+
+After this, you can run the script with `./setup.sh`.
+
+### On Windows (PowerShell)
+
+Windows has a security feature that blocks scripts downloaded from the internet. You must "unblock" the file to mark it as safe. You only need to do this once.
+
+**Solution 1 (Recommended): The `Unblock-File` Command**
+
+1.  Open PowerShell as a regular user (admin is not required).
+2.  Navigate to the project directory.
+3.  Run the following command one time:
+
+<!-- end list -->
+
+```powershell
+Unblock-File -Path .\setup.ps1
+```
+
+This tells Windows you trust this specific file. You can now run it normally with `.\setup.ps1`.
+
+**Solution 2: The GUI (Right-Click) Method**
+
+1.  Right-click on `setup.ps1` in Windows Explorer.
+2.  Select **Properties**.
+3.  On the **General** tab, at the very bottom, check the **"Unblock"** box. [Image of Windows file properties Unblock checkbox]
+4.  Click **OK**.
+
+**Alternative (Temporary) Method:**
+If the methods above fail, you can temporarily bypass the policy for your current terminal window by running `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` before you run the script.
+
+```
+```
+
+
 1. Run the setup script:
    - **Linux/macOS:**
      ```bash
@@ -21,7 +76,17 @@ This repository provides a simple way to run n8n with Postgres using Docker Comp
      .\setup.ps1
      ```
      (Note: Use `.\` not `./` for Windows PowerShell)
+## if running into issue of permission errer 
 
+  - **Windows:**
+     ```powershell
+      Set-ExecutionPolicy -Scope Process
+     ```
+   - **Linux/macOS:**
+     ```bash
+     ./setup.sh
+     ```
+    
 2. Access n8n:
    - Local: [http://localhost:5678](http://localhost:5678)
    - Public (via Cloudflare Tunnel): The script will print a public URL (e.g., `*.trycloudflare.com`).
